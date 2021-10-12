@@ -3,12 +3,18 @@ const cors = require("cors");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer);
-
-const videoToUserListMapper = {};
 
 app.use(cors());
+
+const httpServer = createServer(app);
+const io = require("socket.io")(httpServer, {
+  cors: {
+    origin: "http://localhost:19006",
+    methods: ["GET", "POST"],
+  },
+});
+
+const videoToUserListMapper = {};
 
 app.get("/", (req, res) => {
   res.send("Server Is Running...");
@@ -24,6 +30,10 @@ io.on("connection", (socket) => {
     }
     socket.join(roomID);
     callback(socket.id);
+  });
+  socket.on("sendMessage", (msgObj) => {
+    console.log(msgObj);
+    socket.in(msgObj.roomID).emit("messageReceived", msgObj);
   });
 });
 
