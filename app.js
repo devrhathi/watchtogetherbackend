@@ -5,9 +5,8 @@ const { Server } = require("socket.io");
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
-const { v4: uuidv4 } = require("uuid");
 
-let currentUUID = 0;
+const videoToUserListMapper = {};
 
 app.use(cors());
 
@@ -15,13 +14,17 @@ app.get("/", (req, res) => {
   res.send("Server Is Running...");
 });
 
-app.get("/create-room", (req, res) => {
-  currentUUID = uuidv4();
-  res.send(currentUUID);
-});
-
 io.on("connection", (socket) => {
-  console.log("connected user");
+  socket.on("joinRoom", (roomID, callback) => {
+    if (Object.keys(videoToUserListMapper).indexOf(roomID) === -1) {
+      //key is not there, initialize it
+      videoToUserListMapper[roomID] = [socket.id];
+    } else {
+      videoToUserListMapper[roomID].push(socket.id);
+    }
+    socket.join(roomID);
+    callback(socket.id);
+  });
 });
 
 httpServer.listen(8000, () => {
