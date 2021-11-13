@@ -17,8 +17,6 @@ const io = require("socket.io")(httpServer, {
 
 // const io = new Server(httpServer);
 
-let activePlayers = 0;
-
 app.get("/", (req, res) => {
   res.send("Server Is Running...");
 });
@@ -26,19 +24,8 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
   socket.on("joinRoom", (roomID, callback) => {
     socket.join(roomID);
+    //return socket id to client
     callback(socket.id);
-  });
-
-  socket.on("ready", (currRoomID) => {
-    activePlayers++;
-    socket
-      .in(currRoomID)
-      .allSockets()
-      .then((obj) => {
-        if (activePlayers === obj.size) {
-          socket.in(currRoomID).emit("allPlayersReady");
-        }
-      });
   });
 
   socket.on("sendMessage", (msgObj) => {
@@ -52,11 +39,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("playClicked", (currRoomID) => {
-    socket.in(currRoomID).emit("playVideo");
+    io.in(currRoomID).emit("playVideo");
   });
 
-  socket.on("pauseClicked", ({ timeElapsed, currRoomID }) => {
-    socket.in(currRoomID).emit("pauseVideo", timeElapsed);
+  socket.on("pauseClicked", ({ timeElapsed, currRoomID, duration }) => {
+    io.in(currRoomID).emit("pauseVideo", timeElapsed, duration);
+  });
+
+  socket.on("videoSeeked", ({ videoDurationSeekTo, currRoomID }) => {
+    io.in(currRoomID).emit("seekVideo", videoDurationSeekTo);
   });
 });
 
