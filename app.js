@@ -7,14 +7,17 @@ const app = express();
 app.use(cors());
 
 const httpServer = createServer(app);
+
 const io = require("socket.io")(httpServer, {
   cors: {
-    origin: "http://localhost:19006",
+    origin: "http://localhost:19000",
     methods: ["GET", "POST"],
   },
 });
 
-const videoToUserListMapper = {};
+// const io = new Server(httpServer);
+
+let activePlayers = 0;
 
 app.get("/", (req, res) => {
   res.send("Server Is Running...");
@@ -22,18 +25,38 @@ app.get("/", (req, res) => {
 
 io.on("connection", (socket) => {
   socket.on("joinRoom", (roomID, callback) => {
-    if (Object.keys(videoToUserListMapper).indexOf(roomID) === -1) {
-      //key is not there, initialize it
-      videoToUserListMapper[roomID] = [socket.id];
-    } else {
-      videoToUserListMapper[roomID].push(socket.id);
-    }
     socket.join(roomID);
     callback(socket.id);
   });
+
+  socket.on("ready", (currRoomID) => {
+    activePlayers++;
+    socket
+      .in(currRoomID)
+      .allSockets()
+      .then((obj) => {
+        if (activePlayers === obj.size) {
+          socket.in(currRoomID).emit("allPlayersReady");
+        }
+      });
+  });
+
   socket.on("sendMessage", (msgObj) => {
-    console.log(msgObj);
     socket.in(msgObj.roomID).emit("messageReceived", msgObj);
+    socket
+      .in(msgObj.roomID)
+      .allSockets()
+      .then((setTemp) => {
+        console.log(setTemp.size);
+      });
+  });
+
+  socket.on("playClicked", (currRoomID) => {
+    socket.in(currRoomID).emit("playVideo");
+  });
+
+  socket.on("pauseClicked", ({ timeElapsed, currRoomID }) => {
+    socket.in(currRoomID).emit("pauseVideo", timeElapsed);
   });
 });
 
