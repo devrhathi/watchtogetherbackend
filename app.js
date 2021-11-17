@@ -26,8 +26,11 @@ io.on("connection", (socket) => {
     socket.join(roomID);
     //return socket id to client
     callback(socket.id);
+    //show all connected clients
+    console.log(io.in(roomID).allSockets());
   });
 
+  //Chat Functionality
   socket.on("sendMessage", (msgObj) => {
     socket.in(msgObj.roomID).emit("messageReceived", msgObj);
     socket
@@ -38,6 +41,7 @@ io.on("connection", (socket) => {
       });
   });
 
+  //Video Player Functionality
   socket.on("playClicked", (currRoomID) => {
     io.in(currRoomID).emit("playVideo");
   });
@@ -48,6 +52,21 @@ io.on("connection", (socket) => {
 
   socket.on("videoSeeked", ({ videoDurationSeekTo, currRoomID }) => {
     io.in(currRoomID).emit("seekVideo", videoDurationSeekTo);
+  });
+
+  //Voice Call Functionality
+  socket.on("offerSend", ({ roomID, offer }) => {
+    //send that room's offer and id to client
+    socket.broadcast.emit("offerReceive", offer);
+  });
+
+  socket.on("answerSend", ({ roomID, answer }) => {
+    //send that room's answer and id to client
+    socket.broadcast.emit("answerReceive", answer);
+  });
+
+  socket.on("voiceConnected", (roomID) => {
+    io.in(roomID).emit("voiceConnectedReceived");
   });
 });
 
